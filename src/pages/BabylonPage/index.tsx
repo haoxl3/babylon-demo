@@ -31,6 +31,10 @@ const BabylonPage = () => {
             sceneArg[0].scaling.z = ratio;
             camera.setTarget(sceneArg[1]);
         });
+        camera.keysUp.push(87);//W
+        camera.keysDown.push(83);//S
+        camera.keysLeft.push(65);//A
+        camera.keysRight.push(68);//D
         
         // ==============================================================================================
         // Ok, now for the fun camera controls.  This hacks the internals of ArcRotateCamera so that

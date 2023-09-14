@@ -24,9 +24,7 @@ const BabylonPage = () => {
             sceneArg[0].scaling.z = ratio;
         });
     
-        // This creates and positions a free camera (non-mesh)
-        let camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(-12, 8, 12), scene);
-    
+        let camera = new BABYLON.ArcRotateCamera('Camera', 0, 0, -100, new BABYLON.Vector3(1, 2, -3), scene);
         // This targets the camera to scene origin
         camera.setTarget(new BABYLON.Vector3(0, 5, 0));
     
@@ -37,6 +35,63 @@ const BabylonPage = () => {
         // camera.keysLeft.push(65);  //A
         // camera.keysRight.push(68); //S
         // camera.keysDown.push(83)   //D
+
+        const Epsilon = 0.001;
+
+        var lookingAtPosition = new BABYLON.Vector3(0, 0, 0);
+        var inertialTargetDrift = 0;
+
+        camera._originalCheckInputs = camera._checkInputs;
+        // this is where new camera position can be interpolated during an update tick.
+        camera._checkInputs = function() {
+
+            if (inertialTargetDrift > Epsilon)
+            {
+                inertialTargetDrift *= 0.7;
+                // move camera target slightly towards the lookingAtPosition.
+                let up = camera.upVector;
+                let direction = lookingAtPosition.subtract(camera.target);
+                let len =  direction.length();
+                if (len > 0.1) {
+                    direction.scaleInPlace(0.2 / len);
+                    camera.setTarget(camera.target.add(direction));
+                    console.log("adjusting camera target by " + len);
+                }
+            }
+            else {
+                inertialTargetDrift = 0;
+            }
+
+            camera._originalCheckInputs();
+        }
+        let wheelInput = camera.inputs.attached["mousewheel"];
+        let wheelPrecision = wheelInput.wheelPrecision;
+
+        const mywheel = (p, s) => {
+            var event = p.event;
+            var wheelDelta = 0;
+            if (event.wheelDelta) {
+                wheelDelta = event.wheelDelta;
+            } else {
+                wheelDelta = -(event.deltaY || event.detail) * 60;
+            }
+
+            var delta = wheelDelta / (wheelPrecision * 40);
+            if (delta) {
+                //camera.inertialRadiusOffset += delta;
+                inertialTargetDrift += delta;
+            }
+        }
+        scene.onPointerMove = function(evt, pickInfo){
+            if (pickInfo.ray){
+                var length = camera.position.length();
+                var pos = camera.position.add(pickInfo.ray.direction.scale(length));
+                lookingAtPosition = pos;
+            }
+        }
+
+        const POINTERWHEEL = 0x08;
+        scene.onPointerObservable.add(mywheel, POINTERWHEEL);
     
         engine.current.runRenderLoop(() => {
             if (scene) {
